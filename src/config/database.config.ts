@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmOptionsFactory, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { Admin } from '../entities/admin.entity';
 import { Product } from '../entities/product.entity';
 import { Category } from '../entities/category.entity';
@@ -13,7 +14,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
     const mongoUrl = this.configService.get<string>('MONGODB_URI');
-    
+
     if (!mongoUrl) {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
@@ -21,10 +22,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
     // Add database name if not present in connection string
     let connectionUrl = mongoUrl;
     if (!connectionUrl.match(/mongodb\+srv:\/\/[^/]+\/[^?]/)) {
-      // Normalize `/?:` pattern then insert database name before query string
       const dbName = 'bavari';
       if (connectionUrl.includes('?')) {
-        // Handle common Atlas URI form: ...net/?retryWrites=true
         connectionUrl = connectionUrl.replace('/?', '?');
         connectionUrl = connectionUrl.replace('?', `/${dbName}?`);
       } else {
@@ -32,12 +31,25 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       }
     }
 
+    // Ensure TLS is explicit for Atlas (helps with Render/OpenSSL 3.x)
+    const separator = connectionUrl.includes('?') ? '&' : '?';
+    if (!connectionUrl.includes('tls=true') && !connectionUrl.includes('ssl=true')) {
+      connectionUrl = `${connectionUrl}${separator}tls=true`;
+    }
+
+    // OpenSSL 3.x compatibility with MongoDB Atlas (fixes TLS alert 80 / internal error)
     return {
       type: 'mongodb',
       url: connectionUrl,
       entities: [Admin, Product, Category, Order, OrderItem],
       synchronize: this.configService.get<string>('NODE_ENV') !== 'production',
       logging: false,
+      extra: {
+        tls: true,
+        secureContext: {
+          secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+        },
+      } as any,
     };
   }
 }
