@@ -1,0 +1,15 @@
+# Copy this content to create .env file in backend directory
+
+# Database
+MONGODB_URI=mongodb+srv://feelit:Lorem1122@feelit.pxr9tty.mongodb.net/?appName=feelit
+
+# Environment
+NODE_ENV=development
+
+# JWT
+JWT_SECRET=bavari-super-secret-jwt-key-change-in-production-2024
+
+# Server
+PORT=3001
+FRONTEND_URL=http://localhost:3000
+
