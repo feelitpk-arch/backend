@@ -1,0 +1,7 @@
+# Optional: use with Render Blueprint. Root Directory in dashboard must be empty.
+services:
+  - type: web
+    name: backend
+    runtime: node
+    buildCommand: yarn --frozen-lockfile install && yarn build
+    startCommand: node dist/main
