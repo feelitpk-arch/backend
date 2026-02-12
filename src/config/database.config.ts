@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TypeOrmOptionsFactory, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import * as tls from 'tls';
 import { Admin } from '../entities/admin.entity';
 import { Product } from '../entities/product.entity';
 import { Category } from '../entities/category.entity';
@@ -38,6 +39,11 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
     }
 
     // OpenSSL 3.x compatibility with MongoDB Atlas (fixes TLS alert 80 / internal error)
+    // Driver requires a real tls.SecureContext, not a plain object
+    const secureContext = tls.createSecureContext({
+      secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+    });
+
     return {
       type: 'mongodb',
       url: connectionUrl,
@@ -46,9 +52,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       logging: false,
       extra: {
         tls: true,
-        secureContext: {
-          secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
-        },
+        secureContext,
       } as any,
     };
   }
