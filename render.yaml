@@ -5,3 +5,9 @@ services:
     runtime: node
     buildCommand: yarn --frozen-lockfile install && yarn build
     startCommand: node dist/main
+    envVars:
+      # Node 20 avoids OpenSSL 3 / Node 22 TLS handshake issues with MongoDB Atlas (SSL alert 80)
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_OPTIONS
+        value: "--tls-min-version=1.2"

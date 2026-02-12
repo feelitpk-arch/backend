@@ -30,17 +30,13 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       }
     }
 
-    // Explicit TLS for Atlas; tlsAllowInvalidCertificates works around OpenSSL 3.x / Node 22 TLS alert 80 on Render
-    const separator = connectionUrl.includes('?') ? '&' : '?';
-    const params: string[] = [];
-    if (!connectionUrl.includes('tls=true') && !connectionUrl.includes('ssl=true')) {
-      params.push('tls=true');
-    }
-    if (!connectionUrl.includes('tlsAllowInvalidCertificates')) {
-      params.push('tlsAllowInvalidCertificates=true');
-    }
-    if (params.length > 0) {
-      connectionUrl = `${connectionUrl}${separator}${params.join('&')}`;
+    // For mongodb+srv (Atlas), leave URL unchanged – TLS is default; extra params can trigger SSL alert 80
+    const isSrv = connectionUrl.startsWith('mongodb+srv://');
+    if (!isSrv) {
+      const separator = connectionUrl.includes('?') ? '&' : '?';
+      if (!connectionUrl.includes('tls=true') && !connectionUrl.includes('ssl=true')) {
+        connectionUrl = `${connectionUrl}${separator}tls=true`;
+      }
     }
 
     return {
@@ -50,12 +46,10 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       synchronize: this.configService.get<string>('NODE_ENV') !== 'production',
       logging: false,
       extra: {
-        // Force IPv4 – avoids "tlsv1 alert internal error" when Node 17+ resolves Atlas to IPv6
         family: 4,
         connectTimeoutMS: 15000,
         serverSelectionTimeoutMS: 15000,
-        tls: true,
-        tlsAllowInvalidCertificates: true,
+        ...(isSrv ? {} : { tls: true }),
       },
     };
   }
